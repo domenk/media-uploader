@@ -1,58 +1,154 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Media uploader
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Simple API for uploading media files.
 
-## About Laravel
+## Prerequisites
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Package [php-ffmpeg/php-ffmpeg](https://github.com/PHP-FFMpeg/PHP-FFMpeg/) requires [ffmpeg](https://ffmpeg.org/download.html) to be installed.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+File processing uses Laravel queues.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Usage
 
-## Learning Laravel
+Use `POST user/create` API endpoint to create user. Retrieve authentication token for managing media using `GET user/tokens/create` endpoint.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Endpoints `media*` require authentication token sent using `Authorization: Bearer TOKEN` HTTP header.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Handling media:
+* List all media using `GET media`.
+* Upload media using `POST media`.
+* Get media data using `GET media/{id}`.
+* Get media status after upload using `GET media/{id}/status`.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## API documentation
 
-## Agentic Development
+### `POST user/create` – create user
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Creates new user.
 
-```bash
-composer require laravel/boost --dev
+Required fields: `name`, `email`, `password`
 
-php artisan boost:install
+Example response on success:
+```json
+{
+	"status":"success"
+}
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### `POST user/show` – show user data
 
-## Contributing
+Retrieves user data. May be used for testing user credentials.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Required fields: `email`, `password`
 
-## Code of Conduct
+Example response on success:
+```json
+{
+	"name": "John Doe",
+	"email": "john.doe@example.com"
+}
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### `POST user/tokens/create` – create token
 
-## Security Vulnerabilities
+Creates new authentication token for the user. Retrieved token is used in `Authorization: Bearer TOKEN` HTTP header when accessing `media*` endpoints.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Required fields: `email`, `password`
 
-## License
+Example response on success:
+```json
+{
+	"token": "99|iPX2cfDOz7Hdqq3qiAZci..."
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### `GET media` – retrieve all uploaded media
+
+Retrieves data of all uploaded media. See `GET media/{id}` for field descriptions.
+
+Required headers: `Authorization`
+
+Example response on success:
+```json
+[
+	{
+		"id": 115,
+		"title": "Laravel logotype",
+		"description": "Transparent Laravel icon",
+		"url": "https:\/\/PATH\/storage\/media\/EEkpq2qwhThdmGDCteDD60lonIoUm06lYRIcl3CF.png",
+		"url_thumbnail": "https:\/\/PATH\/storage\/media\/EEkpq2qwhThdmGDCteDD60lonIoUm06lYRIcl3CF_thumb.png",
+		"processed": true,
+		"created_at": "2026-04-05T10:12:53.000000Z"
+	},
+	{
+		"id": 132,
+		"title": "Earth from Space",
+		"description": "Image of Earth From the Perspective of Artemis II - art002e000192",
+		"url": "https:\/\/PATH\/storage\/media\/evIA8HkYcishyNydtCIoyGyLu4W3KqNjr9j6eu02.jpg",
+		"url_thumbnail": "https:\/\/PATH\/storage\/media\/evIA8HkYcishyNydtCIoyGyLu4W3KqNjr9j6eu02_thumb.jpg",
+		"processed": true,
+		"created_at": "2026-04-05T12:43:08.000000Z"
+	}
+]
+```
+
+### `POST media` – upload media
+
+Uploads media (image or video) to the server. Server will create thumbnail of the media. Processing status can be checked using `GET media/{id}/status`.
+
+Required headers: `Authorization`
+
+Required fields:
+* `title` – maximum 255 characters
+* `description` – maximum 255 characters
+* `file` – supported formats: JPEG, PNG, BMP, GIF, WEBP, MPEG, MP4, AVI, MOV, WEBM
+
+Example response on success:
+```json
+{
+	"media_id": 159,
+	"status": "uploaded"
+}
+```
+
+### `GET media/{id}` – get media data
+
+Retrieves media data.
+
+Required headers: `Authorization`
+
+Returned fields:
+* `id` – media ID
+* `title` – title, as sent when file was uploaded
+* `description` – description, as sent when file was uploaded
+* `url` – public URL to the original file
+* `url_thumbnail` – public URL to the file thumbnail (or `null` if the file has not been processed yet)
+* `processed` – boolean, `true` if file is processed (thumbnail is created)
+* `created_at` – upload timestamp
+
+Example response on success:
+```json
+{
+	"id": 132,
+	"title": "Earth from Space",
+	"description": "Image of Earth From the Perspective of Artemis II - art002e000192",
+	"url": "https:\/\/PATH\/storage\/media\/evIA8HkYcishyNydtCIoyGyLu4W3KqNjr9j6eu02.jpg",
+	"url_thumbnail": "https:\/\/PATH\/storage\/media\/evIA8HkYcishyNydtCIoyGyLu4W3KqNjr9j6eu02_thumb.jpg",
+	"processed": true,
+	"created_at": "2026-04-05T12:43:08.000000Z"
+}
+```
+
+### `GET media/{id}/status` – get media processing status
+
+Retrieves media processing status. Field `status` contains value `uploaded` (not yet processed) or `processed` (thumbnail created).
+
+Required headers: `Authorization`
+
+Example response on success:
+```json
+{
+	"media_id": 132,
+	"status": "processed"
+}
+```

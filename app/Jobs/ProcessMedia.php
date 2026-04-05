@@ -13,6 +13,8 @@ use App\Models\Media;
 class ProcessMedia implements ShouldQueue {
 	use Queueable;
 
+	const MAX_THUMBNAIL_DIMENSION = 200;
+
 	protected $media;
 
 	public function __construct(Media $media) {
@@ -44,7 +46,7 @@ class ProcessMedia implements ShouldQueue {
 
 		$manager = ImageManager::usingDriver(Driver::class);
 		$image = $manager->decode($storage->path($mediaImageFilename));
-		$image->scaleDown(200, 200);
+		$image->scaleDown(self::MAX_THUMBNAIL_DIMENSION, self::MAX_THUMBNAIL_DIMENSION);
 		$storage->put($thumbnailFilename, (string) $image->encode());
 
 		$this->media->filename_thumbnail = $thumbnailFilename;
