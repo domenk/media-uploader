@@ -152,3 +152,7 @@ Example response on success:
 	"status": "processed"
 }
 ```
+
+## Attributions
+* Sample image: [Laravel.svg](https://commons.wikimedia.org/wiki/File:Laravel.svg) on Wikimedia
+* Sample video: [Camera moving in lush green forest](https://www.pexels.com/video/camera-moving-in-lush-green-forest-9662150/) on Pexels
