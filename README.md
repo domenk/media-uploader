@@ -122,8 +122,8 @@ Returned fields:
 * `title` – title, as sent when file was uploaded
 * `description` – description, as sent when file was uploaded
 * `url` – public URL to the original file
-* `url_thumbnail` – public URL to the file thumbnail (or `null` if the file has not been processed yet)
-* `processed` – boolean, `true` if file is processed (thumbnail is created)
+* `url_thumbnail` – public URL to the file thumbnail (or `null` if the file has not been processed yet or the processing has failed (broken file etc.))
+* `processed` – boolean, `true` if file is processed
 * `created_at` – upload timestamp
 
 Example response on success:

@@ -24,7 +24,7 @@ class MediaController extends Controller {
 		$request->validate([
 			'title' => ['required', 'max:255'],
 			'description' => ['required', 'max:255'],
-			'file' => ['file', 'mimes:jpeg,png,bmp,gif,webp,mpeg,mp4,avi,mov,webm'],
+			'file' => ['required', 'file', 'mimes:jpeg,png,bmp,gif,webp,mp4,mpeg,avi,mov,webm'],
 		]);
 
 		$newFilename = Storage::disk('public')->putFile('media', $request->file('file'));

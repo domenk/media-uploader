@@ -7,7 +7,9 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Exceptions\ImageDecoderException;
 use FFMpeg;
+use FFMpeg\Exception\RuntimeException as FFMpegRuntimeException;
 use App\Models\Media;
 
 class ProcessMedia implements ShouldQueue {
@@ -31,23 +33,30 @@ class ProcessMedia implements ShouldQueue {
 
 		$mediaMimeType = mime_content_type($storage->path($this->media->filename));
 
-		if(explode('/', $mediaMimeType)[0] == 'video') {
-			$mediaImageFilename = $mediaFilenamePrefix.'_frame.jpg';
+		try {
 
-			$ffprobe = FFMpeg\FFProbe::create();
-			$mediaDuration = $ffprobe->format($storage->path($this->media->filename))->get('duration');
+			if(explode('/', $mediaMimeType)[0] == 'video') {
+				$mediaImageFilename = $mediaFilenamePrefix.'_frame.jpg';
 
-			$ffmpeg = FFMpeg\FFMpeg::create();
-			$video = $ffmpeg->open($storage->path($this->media->filename));
-			$video->frame(FFMpeg\Coordinate\TimeCode::fromSeconds(min(2, $mediaDuration / 2)))->save($storage->path($mediaImageFilename));
+				$ffprobe = FFMpeg\FFProbe::create();
+				$mediaDuration = $ffprobe->format($storage->path($this->media->filename))->get('duration');
+
+				$ffmpeg = FFMpeg\FFMpeg::create();
+				$video = $ffmpeg->open($storage->path($this->media->filename));
+				$video->frame(FFMpeg\Coordinate\TimeCode::fromSeconds(min(2, $mediaDuration / 2)))->save($storage->path($mediaImageFilename));
+
+			}
+
+			$thumbnailFilename = $mediaFilenamePrefix.'_thumb.'.pathinfo($mediaImageFilename, PATHINFO_EXTENSION);
+
+			$manager = ImageManager::usingDriver(Driver::class);
+			$image = $manager->decode($storage->path($mediaImageFilename));
+			$image->scaleDown(self::MAX_THUMBNAIL_DIMENSION, self::MAX_THUMBNAIL_DIMENSION);
+			$storage->put($thumbnailFilename, (string) $image->encode());
+
+		} catch(FFMpegRuntimeException|ImageDecoderException $e) {
+			$thumbnailFilename = null;
 		}
-
-		$thumbnailFilename = $mediaFilenamePrefix.'_thumb.'.pathinfo($mediaImageFilename, PATHINFO_EXTENSION);
-
-		$manager = ImageManager::usingDriver(Driver::class);
-		$image = $manager->decode($storage->path($mediaImageFilename));
-		$image->scaleDown(self::MAX_THUMBNAIL_DIMENSION, self::MAX_THUMBNAIL_DIMENSION);
-		$storage->put($thumbnailFilename, (string) $image->encode());
 
 		$this->media->filename_thumbnail = $thumbnailFilename;
 		$this->media->processed = true;
